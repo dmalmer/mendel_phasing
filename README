@@ -1,0 +1,10 @@
+
+Usage: python phase_main.py <family_genotypes.vcf> [trio|quartet]
+
+
+phase_main.py takes as input a vcf containing genotypes of a father-mother-child trio and outputs phasing statistics
+  and a phased vcf files (genotypes converted from unphased a/b to phased a|b)
+
+if 'quartet' is specified, this will phase the diploid sibling as well and phase any ambiguous locations in the trisomy
+  that can be recovered with the diploid sibling (see figure4 in the genome paper draft for an illustration of this)
+
