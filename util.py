@@ -2,6 +2,8 @@
 import itertools
 from collections import defaultdict
 
+from locus import Locus
+
 def chrom_sort(chroms):
     # get characters after 'chr'
     alphanum = [c.split('chr')[1] for c in chroms]
@@ -37,21 +39,6 @@ def chrom_sort(chroms):
     return sorted_chroms
 
 
-def convert_to_ploidy_alleles(child_SNPs_by_chr, dad_SNPs_by_chr, mom_SNPs_by_chr, vcf_data_by_chr):
-    diploid_alleles = []
-    trisomy_alleles = []
-    for chrom in chrom_sort(vcf_data_by_chr.keys()):
-        for (pos, child_alleles, child_col_str), (_, dad_alleles, dad_col_str), (_, mom_alleles, mom_col_str), vcf_data in \
-                zip(child_SNPs_by_chr[chrom], dad_SNPs_by_chr[chrom], mom_SNPs_by_chr[chrom], vcf_data_by_chr[chrom]):
-                    if len(child_alleles) == 3:
-                        trisomy_alleles.append((child_alleles, dad_alleles, mom_alleles, chrom, pos, child_col_str,
-                                                dad_col_str, mom_col_str, '\t'.join(vcf_data)))
-                    else:
-                        diploid_alleles.append((child_alleles, dad_alleles, mom_alleles, chrom, pos, child_col_str,
-                                                dad_col_str, mom_col_str, '\t'.join(vcf_data)))
-    return diploid_alleles, trisomy_alleles
-
-
 def pairwise(iterable):
     a, b = itertools.tee(iterable)
     next(b, None)
@@ -62,19 +49,20 @@ def read_ped(filename):
     rels = {}
     with open(filename, 'r') as f:
         for line in f:
-            cols = line.split('\t')
-            if cols[2] != '0':
-                rels[cols[0]] = (cols[1], cols[2], cols[3])
+            fam, child, father, mother = line.split('\t')[:4]
+            if father != '0':
+                #if we've already added the proband child, add the sibling
+                if fam in rels.keys():
+                    rels[fam + '-s'] = (child, father, mother)
+                else:
+                    rels[fam] = (child, father, mother)
     return rels
 
 
-def read_vcf(filename, rels, name=None):
-    fam = filename.split('family')[1][0]
+def read_vcf(filename, rels, fam_size):
+    fam = filename.split('family')[1].split('.')[0]
     header = []
-    dad_SNPs_by_chr = defaultdict(list)
-    mom_SNPs_by_chr = defaultdict(list)
-    child_SNPs_by_chr = defaultdict(list)
-    vcf_data_by_chr = defaultdict(list)
+    alleles_by_chr = defaultdict(list)
     with open(filename, 'r') as f_in:
         # header
         line = f_in.readline()
@@ -83,14 +71,16 @@ def read_vcf(filename, rels, name=None):
             line = f_in.readline()
             header.append(line)
 
-        # get indexes of child/dad/mom columns
+        # get indexes of child/dad/mom/sibling columns
         cols = line.strip().split('\t')
         child_i = cols.index(rels[fam][0])
         dad_i = cols.index(rels[fam][1])
         mom_i = cols.index(rels[fam][2])
+        sib_i = cols.index(rels[fam + '-s'][0]) if fam_size == 'quartet' else None
         
         line = f_in.readline()
         while line != '':
+            # grab genotypes and vcf info
             cols = line.strip().split('\t')
             nucleotides = [cols[3]] + cols[4].split(',')
             child_GT = cols[child_i].split(':')[0]
@@ -99,36 +89,34 @@ def read_vcf(filename, rels, name=None):
             child_col_str = ':' + ':'.join(cols[child_i].split(':')[1:])
             dad_col_str = ':' + ':'.join(cols[dad_i].split(':')[1:])
             mom_col_str = ':' + ':'.join(cols[mom_i].split(':')[1:])
+            sibling_GT = cols[sib_i].split(':')[0] if fam_size == 'quartet' else None
+            sibling_col_str = ':' + ':'.join(cols[sib_i].split(':')[1:]) if fam_size == 'quartet' else None
             
-            dad_alleles = dad_GT.replace('/',',').replace('|',',').split(',') if dad_GT != './.' else ['0', '0']
-            mom_alleles = mom_GT.replace('/',',').replace('|',',').split(',') if mom_GT != './.' else ['0', '0']
+            # convert to GT value lists
+            dad_vals = dad_GT.replace('/',',').replace('|',',').split(',') if dad_GT != './.' else ['0', '0']
+            mom_vals = mom_GT.replace('/',',').replace('|',',').split(',') if mom_GT != './.' else ['0', '0']
             if 'chr21' not in cols[0]:
-                child_alleles = child_GT.replace('/',',').replace('|',',').split(',') if child_GT != './.' else ['0', '0']
+                child_vals = child_GT.replace('/',',').replace('|',',').split(',') if child_GT != './.' else ['0', '0']
             else:
-                child_alleles = child_GT.replace('/',',').replace('|',',').split(',') if './.' not in child_GT else ['0', '0', '0']
+                child_vals = child_GT.replace('/',',').replace('|',',').split(',') if './.' not in child_GT else ['0', '0', '0']
+            sibling_vals = None
+            if fam_size == 'quartet':
+                sibling_vals = sibling_GT.replace('/',',').replace('|',',').split(',') if sibling_GT != './.' else ['0', '0']
             
-            if len(set(dad_alleles + mom_alleles + child_alleles)) > 1:
-                dad_SNPs_by_chr
+            # convert to nucleotides
+            dad_alleles = [nucleotides[int(dad_v)] for dad_v in dad_vals]
+            mom_alleles = [nucleotides[int(mom_v)] for mom_v in mom_vals]
+            child_alleles = [nucleotides[int(child_v)] for child_v in child_vals]
+            sibling_alleles = [nucleotides[int(sib_v)] for sib_v in sibling_vals] if fam_size == 'quartet' else None
 
-                dad_SNPs_by_chr[cols[0]].append((int(cols[1]), [nucleotides[int(dad_a)] for dad_a in dad_alleles], dad_col_str))
-                mom_SNPs_by_chr[cols[0]].append((int(cols[1]), [nucleotides[int(mom_a)] for mom_a in mom_alleles], mom_col_str))
-                child_SNPs_by_chr[cols[0]].append((int(cols[1]), [nucleotides[int(child_a)] for child_a in child_alleles], child_col_str))
-            
-                vcf_data_by_chr[cols[0]].append('\t'.join(cols[:-3]))
+            # add to alleles list
+            alleles_by_chr[cols[0]].append(Locus(cols[0], int(cols[1]), '\t'.join(cols[:-3]), child_alleles, child_col_str,
+                                                 dad_alleles, dad_col_str, mom_alleles, mom_col_str, sibling_alleles,
+                                                 sibling_col_str))
                         
             line = f_in.readline()
 
-    if name:
-        if name == rels[fam][0]:
-            return child_SNPs_by_chr
-        elif name == rels[fam][1]:
-            return dad_SNPs_by_chr
-        elif name == rels[fam][2]:
-            return mom_SNPs_by_chr
-        else:
-            raise Exception('Indvidual\'s name not contained in pedigree file')
-
-    return dad_SNPs_by_chr, mom_SNPs_by_chr, child_SNPs_by_chr, vcf_data_by_chr, header
+    return alleles_by_chr, header
 
 
 def output_phased_vcf(phased_tups, vcf_header, phased_regions, fdir, shortname):

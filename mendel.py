@@ -3,20 +3,20 @@ def find_nondisjunct_parent(trisomy_alleles):
     dad_more_shared = 0
     mom_more_shared = 0
     # only care about trio alleles, ignore rest (this can be done much cleaner in python 3.x)
-    for child_alleles, dad_alleles, mom_alleles, _, _, _, _, _, _ in trisomy_alleles:
-        c_tmp_d = list(child_alleles)
-        c_tmp_m = list(child_alleles)
+    for locus in trisomy_alleles:
+        c_tmp_d = list(locus.child_alleles)
+        c_tmp_m = list(locus.child_alleles)
         
         d_curr = 0
         m_curr = 0
-        for d in dad_alleles:
+        for d in locus.dad_alleles:
             try:
                 c_tmp_d.remove(d)
                 d_curr += 1
             except ValueError:
                 pass
         
-        for m in mom_alleles:
+        for m in locus.mom_alleles:
             try:
                 c_tmp_m.remove(m)
                 m_curr += 1

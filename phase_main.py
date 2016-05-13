@@ -2,39 +2,47 @@
 import sys
 from collections import defaultdict
 
-from util import chrom_sort, convert_to_ploidy_alleles, read_ped, read_vcf, output_phased_vcf
+from util import chrom_sort, read_ped, read_vcf, output_phased_vcf
 from mendel import find_nondisjunct_parent, phase_trio_diploid, phase_trio_trisomy
+
 
 def phase(diploid_alleles, trisomy_alleles):
     phases_by_chr = defaultdict(list)
     unique_phases = {}
 
     # diploid phasing
-    for child_alleles, dad_alleles, mom_alleles, chrom, pos, child_col_str, dad_col_str, mom_col_str, line_pre_str in diploid_alleles: 
+    for child_alleles, dad_alleles, mom_alleles, sibling_alleles, chrom, pos, child_col_str, dad_col_str, mom_col_str, \
+            sibling_col_str, line_pre_str in diploid_alleles: 
         # inheritance phasing
+        #  phase proband child
         child_phased_GT, dad_phased_GT, mom_phased_GT, is_mendelian = phase_trio_diploid(child_alleles, dad_alleles, mom_alleles)
+        #  phase sibling (if available)
+        sibling_phased_GT = ''
+        if len(sibling_alleles) > 0:
+            sibling_phased_GT, _, _, _ = phase_trio_diploid(sibling_alleles, dad_alleles, mom_alleles)
     
         # add phase (pos, child_phase, dad_phase, mom_phase, is_mendelian, line_pre_str)
         phases_by_chr[chrom].append((pos, child_phased_GT + child_col_str, dad_phased_GT + dad_col_str, 
-                                     mom_phased_GT + mom_col_str, is_mendelian, line_pre_str))
+                                     mom_phased_GT + mom_col_str, sibling_phased_GT + sibling_col_str, is_mendelian, line_pre_str))
 
         k = '_'.join((child_phased_GT, dad_phased_GT, mom_phased_GT))
         if k not in unique_phases:
             unique_phases[k] = (child_phased_GT, dad_phased_GT, mom_phased_GT, child_alleles, dad_alleles, mom_alleles, is_mendelian, '')
     
     # trisomy phasing
-    nondisjunct_parent = find_nondisjunct_parent(trisomy_alleles)
-    for child_alleles, dad_alleles, mom_alleles, chrom, pos, child_col_str, dad_col_str, mom_col_str, line_pre_str in trisomy_alleles:
-        # inheritance phasing
-        child_phased_GT, dad_phased_GT, mom_phased_GT, is_mendelian = phase_trio_trisomy(child_alleles, dad_alleles, mom_alleles, nondisjunct_parent)
-            
-        # add phase (pos, child_phase, dad_phase, mom_phase, is_mendelian, line_pre_str)
-        phases_by_chr[chrom].append((pos, child_phased_GT + child_col_str, dad_phased_GT + dad_col_str, 
-                                     mom_phased_GT + mom_col_str, is_mendelian, line_pre_str))
+    if len(trisomy_alleles) > 0:
+        nondisjunct_parent = find_nondisjunct_parent(trisomy_alleles)
+        for child_alleles, dad_alleles, mom_alleles, chrom, pos, child_col_str, dad_col_str, mom_col_str, line_pre_str in trisomy_alleles:
+            # inheritance phasing
+            child_phased_GT, dad_phased_GT, mom_phased_GT, is_mendelian = phase_trio_trisomy(child_alleles, dad_alleles, mom_alleles, nondisjunct_parent)
+                
+            # add phase (pos, child_phase, dad_phase, mom_phase, is_mendelian, line_pre_str)
+            phases_by_chr[chrom].append((pos, child_phased_GT + child_col_str, dad_phased_GT + dad_col_str, 
+                                        mom_phased_GT + mom_col_str, is_mendelian, line_pre_str))
 
-        k = '_'.join(('_'.join(child_alleles), '_'.join(dad_alleles), '_'.join(mom_alleles), nondisjunct_parent))
-        if k not in unique_phases:
-            unique_phases[k] = (child_phased_GT, dad_phased_GT, mom_phased_GT, child_alleles, dad_alleles, mom_alleles, is_mendelian, nondisjunct_parent)
+            k = '_'.join(('_'.join(child_alleles), '_'.join(dad_alleles), '_'.join(mom_alleles), nondisjunct_parent))
+            if k not in unique_phases:
+                unique_phases[k] = (child_phased_GT, dad_phased_GT, mom_phased_GT, child_alleles, dad_alleles, mom_alleles, is_mendelian, nondisjunct_parent)
     
     return phases_by_chr, unique_phases
 
@@ -56,12 +64,16 @@ if __name__ == '__main__':
 
     # read ped file
     rels = read_ped(ped_file)
-    print rels
-    exit(0)
+
+    # read vcf file and set nondisjunction parent
+    alleles_by_chr, header = read_vcf(filename, rels, fam_size)
+    trisomy_alleles = [locus for allele_list in alleles_by_chr.values() for locus in allele_list if locus.ploidy == 3]
+    nondisjunct_parent = find_nondisjunct_parent(trisomy_alleles)
+    for locus in trisomy_alleles:
+        locus.nondisjunct_parent = nondisjunct_parent
 
     # phase
-    dad_SNPs_by_chr, mom_SNPs_by_chr, child_SNPs_by_chr, vcf_data_by_chr, header = read_vcf(filename, rels)
-    diploid_alleles, trisomy_alleles = convert_to_ploidy_alleles(child_SNPs_by_chr, dad_SNPs_by_chr, mom_SNPs_by_chr, vcf_data_by_chr)
+    #TODO: FINISH
     phases_by_chr, unique_phases = phase(diploid_alleles, trisomy_alleles)
             
     # print results
