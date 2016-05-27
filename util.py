@@ -4,46 +4,6 @@ from collections import defaultdict
 
 from locus import Locus
 
-def chrom_sort(chroms):
-    # get characters after 'chr'
-    alphanum = [c.split('chr')[1] for c in chroms]
-    
-    # split up chroms with and without '_', convert numbers to ints for easier sorting
-    mapped = []
-    unmapped = []
-    for an in alphanum:
-        if '_' in an:
-            tup = (an.split('_')[0], '_'.join(an.split('_')[1:]))
-            try:
-                unmapped.append((int(tup[0]), tup[1]))
-            except ValueError:
-                unmapped.append((tup[0], tup[1]))
-        else:
-            try:
-                mapped.append(int(an))
-            except ValueError:
-                mapped.append(an)
-
-    # sort, and move M's to front
-    sorted_chroms = []
-    mapped.sort()
-    unmapped.sort()
-    #  mapped
-    if 'M' in mapped:
-        sorted_chroms.append('chrM')
-    sorted_chroms.extend(['chr' + str(an) for an in mapped if an != 'M'])
-    #  unmapped
-    sorted_chroms.extend(['chr' + tup[0] + '_' + tup[1] for tup in unmapped if tup[0] == 'M'])
-    sorted_chroms.extend(['chr' + str(tup[0]) + '_' + tup[1] for tup in unmapped if tup[0] != 'M'])
-    
-    return sorted_chroms
-
-
-def pairwise(iterable):
-    a, b = itertools.tee(iterable)
-    next(b, None)
-    return itertools.izip(a, b)
-
 
 def read_ped(filename):
     rels = {}
