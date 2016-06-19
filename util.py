@@ -53,15 +53,15 @@ def read_vcf(filename, rels, fam_size):
             sibling_col_str = ':' + ':'.join(cols[sib_i].split(':')[1:]) if fam_size == 'quartet' else None
             
             # convert to GT value lists
-            dad_vals = dad_GT.replace('/',',').replace('|',',').split(',') if dad_GT != './.' else ['0', '0']
-            mom_vals = mom_GT.replace('/',',').replace('|',',').split(',') if mom_GT != './.' else ['0', '0']
+            dad_vals = dad_GT.replace('/',',').replace('|',',').split(',') if (dad_GT != './.' and dad_GT != '0') else ['0', '0']
+            mom_vals = mom_GT.replace('/',',').replace('|',',').split(',') if (mom_GT != './.' and mom_GT != '0') else ['0', '0']
             if 'chr21' not in cols[0]:
-                child_vals = child_GT.replace('/',',').replace('|',',').split(',') if child_GT != './.' else ['0', '0']
+                child_vals = child_GT.replace('/',',').replace('|',',').split(',') if (child_GT != './.' and child_GT != '0') else ['0', '0']
             else:
-                child_vals = child_GT.replace('/',',').replace('|',',').split(',') if './.' not in child_GT else ['0', '0', '0']
+                child_vals = child_GT.replace('/',',').replace('|',',').split(',') if ('./.' not in child_GT and child_GT != '0') else ['0', '0', '0']
             sibling_vals = None
             if fam_size == 'quartet':
-                sibling_vals = sibling_GT.replace('/',',').replace('|',',').split(',') if sibling_GT != './.' else ['0', '0']
+                sibling_vals = sibling_GT.replace('/',',').replace('|',',').split(',') if (sibling_GT != './.' and sibling_GT != '0') else ['0', '0']
             
             # convert to nucleotides
             dad_alleles = [nucleotides[int(dad_v)] for dad_v in dad_vals]
