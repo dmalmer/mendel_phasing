@@ -11,5 +11,5 @@
 #PBS -m ae
 #PBS -M daniel.malmer@colorado.edu
 
-python /projects/Down/Dowellseq/genomes/mendel_phasing/phase_main.py ${INPUT_FILE}
+python /projects/Down/Dowellseq/genomes/mendel_phasing/phase_main.py ${INPUT_FILE} ${FAM_SIZE}
 
