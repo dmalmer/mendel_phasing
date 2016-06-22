@@ -55,15 +55,14 @@ if __name__ == '__main__':
         for locus in loci_list: 
             if locus.is_mendelian:
                 alleles = set(locus.child_alleles + locus.dad_alleles + locus.mom_alleles)
-                #if '/' in locus.child_phased_GT + locus.dad_phased_GT + locus.mom_phased_GT:
                 if locus.is_phased:
                     # phased
-                    #if len(alleles) > 1:
                     if locus.is_heterozygous:
                         if locus.ploidy == 2:
                             dip_het_mend_phased += 1
                         else:
                             tri_het_mend_phased += 1
+                            tri_het_mend_disj_phased += 1
                             if locus.is_phased_by_sibling:
                                 tri_het_mend_sib_phased += 1
                     else:
@@ -80,17 +79,16 @@ if __name__ == '__main__':
 
                 else:
                     # unphased
-                    #if len(alleles) > 1:
                     if locus.is_heterozygous:
                         if locus.ploidy == 2:
                             dip_het_mend_unphased += 1
                         else:
                             tri_het_mend_unphased += 1
                             if '|' in locus.child_phased_GT:
-                                #should always occur (we phase 100% of the disjunction parent alleles), assertion at end
+                                #should always occur (we phase 100% of the disjunction parent alleles)
                                 tri_het_mend_disj_phased += 1
                     else:
-                        #should never occur, assertion at end
+                        #should never occur (all indvs are diploid and have mendelian inheritance, but can't be phased)
                         if locus.ploidy == 2:
                             dip_hom_mend_unphased += 1
                         else:
@@ -112,8 +110,6 @@ if __name__ == '__main__':
                     phased_regions_by_chr[locus.chrom].append(curr_region)
                 curr_region = ['', '', '']
 
-    #TODO: ADD TWO ASSERTIONS
-
     def print_division(print_str, numerator, denominator):
         print print_str,
         try:
@@ -123,25 +119,28 @@ if __name__ == '__main__':
 
     print '\n\nPHASE COUNTS:'
     print ' DIPLOID:'
-    print '  dip_het_mend_phased = %i' % dip_het_mend_phased
-    print '  dip_het_mend_unphased = %i' % dip_het_mend_unphased
-    print '  dip_hom_mend_phased = %i' % dip_hom_mend_phased
-    print '  dip_hom_mend_unphased = %i' % dip_hom_mend_unphased
-    print '  dip_nonmend = %i' % dip_nonmend
-    print_division('  percent non-mend = ', dip_nonmend, dip_het_mend_phased + dip_het_mend_unphased + dip_hom_mend_phased + dip_hom_mend_unphased + dip_nonmend)
-    print_division('  percent of HET mend that can be phased = ', dip_het_mend_phased, dip_het_mend_phased + dip_het_mend_unphased)
-    print_division('  percent of HOM mend that can be phased = ', dip_hom_mend_phased, dip_hom_mend_phased + dip_hom_mend_unphased)
+    print '  # positions phased with mendelian inheritance and child is heterozygous = %i' % dip_het_mend_phased
+    print '  # positions unphased with mendelian inheritance and child is heterozygous = %i' % dip_het_mend_unphased
+    print '  # positions phased with mendelian inheritance and child is homozygous (should be all mend-hom positions) = %i' % dip_hom_mend_phased
+    print '  # positions unphased with mendelian inheritance and child is homozygous (should be 0) = %i' % dip_hom_mend_unphased
+    print '  # positions with nonmendelian inheritance = %i' % dip_nonmend
+    print_division('  percent of HOM mendelian positions that can be phased (should be 1.0) = ', dip_hom_mend_phased, dip_hom_mend_phased + dip_hom_mend_unphased)
+    print_division('  percent of HET mendelian positions that can be phased = ', dip_het_mend_phased, dip_het_mend_phased + dip_het_mend_unphased)
+    print_division('  percent non-mendelian inheritance = ', dip_nonmend, dip_het_mend_phased + dip_het_mend_unphased + dip_hom_mend_phased + dip_hom_mend_unphased + dip_nonmend)
 
-    print ' TRISOMY:'
-    print '  tri_het_mend_phased_21 = %i' % tri_het_mend_phased
-    print '  tri_het_mend_unphased_21 = %i' % tri_het_mend_unphased
-    print '  tri_het_mend_disj_phased = %i' % tri_het_mend_disj_phased
-    print '  tri_hom_mend_phased_21 = %i' % tri_hom_mend_phased
-    print '  tri_hom_mend_unphased_21 = %i' % tri_hom_mend_unphased
-    print '  tri_nonmend_21 = %i' % tri_nonmend
+    print '\n TRISOMY:'
+    print '  # positions completely phased with mendelian inheritance and child is heterozygous = %i' % tri_het_mend_phased
+    print '  # positions partially unphased with mendelian inheritance and child is heterozygous = %i' % tri_het_mend_unphased
+    print '  # positions phased by leveraging diploid sibling = %i' % tri_het_mend_sib_phased
+    print '  # positions where allele inherited from normal-disjunction parent is phased (should be all mend-het positions) = % i' % tri_het_mend_disj_phased
+    print '  # positions phased with mendelian inheritance and child is homozygous (should be all mend-hom positions) = %i' % tri_hom_mend_phased
+    print '  # positions unphased with mendelian inheritance and child is homozygous (should be 0) = %i' % tri_hom_mend_unphased
+    print '  # positions with nonmendelian inheritance = %i' % tri_nonmend
+    print_division('  percent of HOM mendelian positions that can be completely phased (should be 1.0) = ', tri_hom_mend_phased, tri_hom_mend_phased + tri_hom_mend_unphased)
+    print_division('  percent of HET mendelian positions where the normal-disjunction parent allele can be phased (should be 1.0) = ', tri_het_mend_disj_phased, tri_het_mend_phased + tri_het_mend_unphased)
+    print_division('  percent of HET mendelian positions that can be completely phased = ', tri_het_mend_phased, tri_het_mend_phased + tri_het_mend_unphased)
+    print_division('  percent of HET mendelian positions that were able to be phased by leveraging the diploid sibling = ', tri_het_mend_sib_phased, tri_het_mend_phased + tri_het_mend_unphased)
     print_division('  percent non-mend_21 = ', tri_nonmend, tri_het_mend_phased + tri_het_mend_unphased + tri_hom_mend_phased + tri_hom_mend_unphased + tri_nonmend)
-    print_division('  percent of HET mend_21 that can be phased = ', tri_het_mend_phased, tri_het_mend_phased + tri_het_mend_unphased)
-    print_division('  percent of HOM mend_21 that can be phased = ', tri_hom_mend_phased, tri_hom_mend_phased + tri_hom_mend_unphased)
     
     #output_phased_vcf(phases_by_file[shortname], headers_by_file[shortname], phased_regions, 
     #                  output_dir + '_'.join(shortname.split('_')[1:4]) + '/', shortname) 
