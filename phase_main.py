@@ -17,15 +17,15 @@ if __name__ == '__main__':
     print 'file: ' + filename
 
     # second (optional) input parameter is if we're phasing a quartet rather than a trio
-    fam_size = 'trio'
+    fam_type = 'trio'
     if len(sys.argv) > 2:
-        fam_size = 'quartet' if 'quart' in sys.argv[2].lower() or sys.argv[2] == '4' else 'trio'
+        fam_type = 'quartet' if 'quart' in sys.argv[2].lower() or sys.argv[2] == '4' else 'trio'
 
     # read ped file
     rels = read_ped(ped_file)
 
     # read vcf file and find nondisjunction parent
-    loci_by_chr, header = read_vcf(filename, rels, fam_size)
+    loci_by_chr, header = read_vcf(filename, rels, fam_type)
     trisomy_loci = [locus for loci_list in loci_by_chr.values() for locus in loci_list if locus.ploidy == 3]
     nondisjunct_parent = find_nondisjunct_parent(trisomy_loci) if len(trisomy_loci) > 0 else None
 
@@ -142,6 +142,7 @@ if __name__ == '__main__':
     print_division('  percent of HET mendelian positions that were able to be phased by leveraging the diploid sibling = ', tri_het_mend_sib_phased, tri_het_mend_phased + tri_het_mend_unphased)
     print_division('  percent non-mend_21 = ', tri_nonmend, tri_het_mend_phased + tri_het_mend_unphased + tri_hom_mend_phased + tri_hom_mend_unphased + tri_nonmend)
     
-    #output_phased_vcf(phases_by_file[shortname], headers_by_file[shortname], phased_regions, 
-    #                  output_dir + '_'.join(shortname.split('_')[1:4]) + '/', shortname) 
+    #output a phased vcf file called <filename>.phased.vcf
+    # and a bed file of the phased regions called <filename>.phased_regions.bed
+    output_phased_vcf(filename, loci_by_chr, header, rels, fam_type, phased_regions_by_chr) 
 
