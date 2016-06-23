@@ -27,10 +27,6 @@ def find_nondisjunct_parent(trisomy_alleles):
             dad_more_shared += 1
         elif m_curr > d_curr:
             mom_more_shared += 1
-        
-    #print 'count more shared:'
-    #print 'dad_more_shared = ' + str(dad_more_shared)
-    #print 'mom_more_shared = ' + str(mom_more_shared)
 
     nondisjunct_parent = 'dad' if dad_more_shared > mom_more_shared else 'mom'
     if float(max(dad_more_shared, mom_more_shared)) / (dad_more_shared + mom_more_shared) < .66:
@@ -62,32 +58,35 @@ def phase_trio_diploid(child_alleles, dad_alleles, mom_alleles):
 
     # two hom, two shared (eg. 0/0, 0/0)
     if len(hom_parents) == 2 and num_shared_alleles == 2:
-        # trivially phase mom and dad
-        dad_GT = '|'.join(dad_alleles)
-        mom_GT = '|'.join(mom_alleles)
-        
         # mendelian child must has same alleles as mom and dad
         if child_alleles[0] == child_alleles[1] == dad_alleles[0]:
             child_GT = '|'.join(child_alleles)
+            dad_GT = '|'.join(dad_alleles)
+            mom_GT = '|'.join(mom_alleles)
         else:
             # non-mendelian
             is_mendelian = False
             child_GT = '/'.join(child_alleles)
+            dad_GT = '/'.join(dad_alleles)
+            mom_GT = '/'.join(mom_alleles)
    
     # two hom, zero shared (eg. 0/0, 1/1)
     elif len(hom_parents) == 2 and num_shared_alleles == 0:
-        # trivially phase mom and dad
-        dad_GT = '|'.join(dad_alleles)
-        mom_GT = '|'.join(mom_alleles)
         # mendelian child must have one allele from one parent and one from the other
         if child_alleles[0] in dad_alleles and child_alleles[1] in mom_alleles:
             child_GT = child_alleles[0] + '|' + child_alleles[1]
+            dad_GT = '|'.join(dad_alleles)
+            mom_GT = '|'.join(mom_alleles)
         elif child_alleles[1] in dad_alleles and child_alleles[0] in mom_alleles:
             child_GT = child_alleles[1] + '|' + child_alleles[0]
+            dad_GT = '|'.join(dad_alleles)
+            mom_GT = '|'.join(mom_alleles)
         else:
             # non-mendelian
             is_mendelian = False
             child_GT = '/'.join(child_alleles)
+            dad_GT = '/'.join(dad_alleles)
+            mom_GT = '/'.join(mom_alleles)
 
     # one hom, one shared (eg. 0/0, 0/1)
     elif len(hom_parents) == 1 and num_shared_alleles == 1:
@@ -95,8 +94,6 @@ def phase_trio_diploid(child_alleles, dad_alleles, mom_alleles):
         if child_alleles[0] == child_alleles[1]:
             # if dad is homozygous, phase mom
             if hom_parents[0] == 'dad':
-                # trivially phase dad
-                dad_GT = '|'.join(dad_alleles)
                 # check that dad passed one allele
                 if child_alleles[0] == dad_alleles[0]:
                     # phase mom
@@ -104,22 +101,23 @@ def phase_trio_diploid(child_alleles, dad_alleles, mom_alleles):
                         c_i = mom_alleles.index(child_alleles[0])
                         n_i = 0 if c_i == 1 else 1
                         mom_GT = mom_alleles[c_i] + '|' + mom_alleles[n_i]
-                        # trivially phase child
+                        # trivially phase child and dad
                         child_GT = '|'.join(child_alleles)
+                        dad_GT = '|'.join(dad_alleles)
                     except:
                         # if child allele isn't in mom, non-mendelian
                         is_mendelian = False
                         child_GT = '/'.join(child_alleles)
+                        dad_GT = '/'.join(dad_alleles)
                         mom_GT = '/'.join(mom_alleles)
                 else:
                     # if child didn't receive any alleles from dad, non-mendelian
                     is_mendelian = False
                     child_GT = '/'.join(child_alleles)
+                    dad_GT = '/'.join(dad_alleles)
                     mom_GT = '/'.join(mom_alleles)
             # if mom is homozygous, phase dad
             else:
-                # trivially phase mom
-                mom_GT = '|'.join(mom_alleles)
                 # check that mom passed one allele
                 if child_alleles[0] == mom_alleles[0]:
                     # phase dad
@@ -127,25 +125,26 @@ def phase_trio_diploid(child_alleles, dad_alleles, mom_alleles):
                         c_i = dad_alleles.index(child_alleles[0])
                         n_i = 0 if c_i == 1 else 1
                         dad_GT = dad_alleles[c_i] + '|' + dad_alleles[n_i]
-                        # trivially phase child
+                        # trivially phase child and mom
                         child_GT = '|'.join(child_alleles)
+                        mom_GT = '|'.join(mom_alleles)
                     except:
                         # if child allele isn't in mom, non-mendelian
                         is_mendelian = False
                         child_GT = '/'.join(child_alleles)
                         dad_GT = '/'.join(dad_alleles)
+                        mom_GT = '/'.join(mom_alleles)
                 else:
                     # if child didn't receive any alleles from mom, non-mendelian
                     is_mendelian = False
                     child_GT = '/'.join(child_alleles)
                     dad_GT = '/'.join(dad_alleles)
+                    mom_GT = '/'.join(mom_alleles)
 
         #if child is het, must have received non-shared allele from het parent
         else:
             # if dad is homozygous, phase child with mom
             if hom_parents[0] == 'dad':
-                # trivially phase dad
-                dad_GT = '|'.join(dad_alleles)
                 try:
                     # phase child
                     d_i = child_alleles.index(dad_alleles[0])
@@ -155,17 +154,18 @@ def phase_trio_diploid(child_alleles, dad_alleles, mom_alleles):
                     c_i = mom_alleles.index(child_alleles[m_i])
                     n_i = 0 if c_i == 1 else 1
                     mom_GT = mom_alleles[c_i] + '|' + mom_alleles[n_i]
+                    # trivially phase dad
+                    dad_GT = '|'.join(dad_alleles)
                 except:
                     # either:
                     #  1. neither of child's alleles came from dad, non-mendelian
                     #  2. neither of mom's alleles are in child, non-mendelian
                     is_mendelian = False
                     child_GT = '/'.join(child_alleles)
+                    dad_GT = '/'.join(dad_alleles)
                     mom_GT = '/'.join(mom_alleles)
             # if mom is homozygous, phase child with dad
             else:
-                # trivially phase mom
-                mom_GT = '|'.join(mom_alleles)
                 try:
                     # phase child
                     m_i = child_alleles.index(mom_alleles[0])
@@ -175,6 +175,8 @@ def phase_trio_diploid(child_alleles, dad_alleles, mom_alleles):
                     c_i = dad_alleles.index(child_alleles[d_i])
                     n_i = 0 if c_i == 1 else 1
                     dad_GT = dad_alleles[c_i] + '|' + dad_alleles[n_i]
+                    # trivially phase mom
+                    mom_GT = '|'.join(mom_alleles)
                 except:
                     # either:
                     #  1. neither of child's alleles came from mom, non-mendelian
@@ -182,13 +184,12 @@ def phase_trio_diploid(child_alleles, dad_alleles, mom_alleles):
                     is_mendelian = False
                     child_GT = '/'.join(child_alleles)
                     dad_GT = '/'.join(dad_alleles)
+                    mom_GT = '/'.join(mom_alleles)
         
     # one hom, zero shared (eg. 0/0, 1/2)
     elif len(hom_parents) == 1 and num_shared_alleles == 0:
         # if dad is homozygous, phase child with mom
         if hom_parents[0] == 'dad':
-            # trivially phase dad
-            dad_GT = '|'.join(dad_alleles)
             try:
                 # phase child
                 d_i = child_alleles.index(dad_alleles[0])
@@ -198,17 +199,18 @@ def phase_trio_diploid(child_alleles, dad_alleles, mom_alleles):
                 c_i = mom_alleles.index(child_alleles[m_i])
                 n_i = 0 if c_i == 1 else 1
                 mom_GT = mom_alleles[c_i] + '|' + mom_alleles[n_i]
+                # trivially phase dad
+                dad_GT = '|'.join(dad_alleles)
             except:
                 # either:
                 #  1. neither of child's alleles came from dad, non-mendelian
                 #  2. neither of mom's alleles are in child, non-mendelian
                 is_mendelian = False
                 child_GT = '/'.join(child_alleles)
+                dad_GT = '/'.join(dad_alleles)
                 mom_GT = '/'.join(mom_alleles)
         # if mom is homozygous, phase child with dad
         else:
-            # trivially phase mom
-            mom_GT = '|'.join(mom_alleles)
             try:
                 # phase child
                 m_i = child_alleles.index(mom_alleles[0])
@@ -218,6 +220,8 @@ def phase_trio_diploid(child_alleles, dad_alleles, mom_alleles):
                 c_i = dad_alleles.index(child_alleles[d_i])
                 n_i = 0 if c_i == 1 else 1
                 dad_GT = dad_alleles[c_i] + '|' + dad_alleles[n_i]
+                # trivially phase mom
+                mom_GT = '|'.join(mom_alleles)
             except:
                 # either:
                 #  1. neither of child's alleles came from dad, non-mendelian
@@ -225,6 +229,7 @@ def phase_trio_diploid(child_alleles, dad_alleles, mom_alleles):
                 is_mendelian = False
                 child_GT = '/'.join(child_alleles)
                 dad_GT = '/'.join(dad_alleles)
+                mom_GT = '/'.join(mom_alleles)
     
     # zero hom, two shared (eg. 0/1, 0/1)
     elif len(hom_parents) == 0 and num_shared_alleles == 2:
@@ -362,9 +367,9 @@ def phase_trio_diploid(child_alleles, dad_alleles, mom_alleles):
 
 def phase_trio_trisomy(child_alleles, dad_alleles, mom_alleles, nondisjunct_parent):
     # returns (child_GT, nondisj_GT, disj_GT, is_mendelian True/False)
-    #  GT of parent that passed extra chrom can't be phased
+    #  GT of parent that passed extra chrom can't be phased if heterozygous
     #  GT of parent that didn't can be phased (a|b) or unphased (a/b)
-    #  child GT can be completely phased (a|b|c), partially phased (a|b/c), or unphased (a/b/c)
+    #  child GT can be completely phased (a|b|c) or partially phased (a|b/c, can always phase normal disjunction parent)
     #   the left-most child allele will is from the dad and the right-most child allele is from the mom,
     #   the middle child allele is from whichever parent passed the extra chromosome
     child_GT = ''
@@ -384,8 +389,8 @@ def phase_trio_trisomy(child_alleles, dad_alleles, mom_alleles, nondisjunct_pare
         except ValueError:
             is_mendelian = False
             child_GT = '/'.join(child_alleles)
-            dad_GT = '|'.join(dad_alleles) if dad_alleles[0] == dad_alleles[1] else '/'.join(dad_alleles) 
-            mom_GT = '|'.join(mom_alleles) if mom_alleles[0] == mom_alleles[1] else '/'.join(mom_alleles) 
+            dad_GT = '/'.join(dad_alleles) 
+            mom_GT = '/'.join(mom_alleles) 
             
             return (child_GT, dad_GT, mom_GT, is_mendelian)
     else:
@@ -404,8 +409,8 @@ def phase_trio_trisomy(child_alleles, dad_alleles, mom_alleles, nondisjunct_pare
         else:
             is_mendelian = False
             child_GT = '/'.join(child_alleles)
-            dad_GT = '|'.join(dad_alleles) if dad_alleles[0] == dad_alleles[1] else '/'.join(dad_alleles) 
-            mom_GT = '|'.join(mom_alleles) if mom_alleles[0] == mom_alleles[1] else '/'.join(mom_alleles) 
+            dad_GT = '/'.join(dad_alleles) 
+            mom_GT = '/'.join(mom_alleles) 
             
             return (child_GT, dad_GT, mom_GT, is_mendelian)
 
