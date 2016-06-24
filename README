@@ -8,3 +8,7 @@ phase_main.py takes as input a vcf containing genotypes of a father-mother-child
 if 'quartet' is specified, this will phase the diploid sibling as well and phase any ambiguous locations in the trisomy
   that can be recovered with the diploid sibling (see figure4 in the genome paper draft for an illustration of this)
 
+the scripts will output two files:
+    <family_genotypes>.phased.vcf - the original VCF file with phased genotype information
+    <family_genotypes>.phased-regions.bed - BED file showing contiguous regions where every SNP is phased
+
